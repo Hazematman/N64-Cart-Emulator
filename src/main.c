@@ -85,6 +85,41 @@ const char *hello_world = "Hello World!\r\n";
 
 volatile uint32_t vector_table[0x400];
 
+typedef enum
+{
+    GPIO_PORT_B,
+    GPIO_PORT_C,
+    GPIO_PORT_D,
+    GPIO_PORT_E,
+    GPIO_PORT_F,
+    GPIO_PORT_G,
+} gpio_port_t;
+
+typedef enum
+{
+    GPIO_INT_MODE_POS_EDGE,
+    GPIO_INT_MODE_NEG_EDGE,
+    GPIO_INT_MODE_HIGH,
+    GPIO_INT_MODE_LOW,
+    GPIO_INT_MODE_DOUBLE_EDGE,
+} gpio_interrupt_mode_t;
+
+typedef enum
+{
+    GPIO_MODE_INPUT = 0b0000,
+    GPIO_MODE_OUTPUT = 0b0001,
+    GPIO_MODE_A,
+    GPIO_MODE_B,
+    GPIO_MODE_C,
+    GPIO_MODE_D,
+    GPIO_MODE_E,
+    GPIO_MODE_F,
+    GPIO_MODE_G,
+    GPIO_MODE_H,
+    GPIO_MODE_INT = 0b1110,
+    GPIO_MODE_DISABLE = 0b1111,
+} gpio_pin_mode_t;
+
 static inline void dev_barrier(void) {
     asm volatile (
         "fence iorw, iorw"
@@ -148,6 +183,56 @@ void _putchar(char c)
     write_reg(UART0_DATA_REG, c);
 }
 
+void set_gpio_interrupt(gpio_port_t port, int pin, gpio_interrupt_mode_t mode)
+{
+    uint32_t pin_offset = pin / 8;
+    uint32_t pin_index = pin % 8;
+    uintptr_t gpio_int_reg =  GPIO_PB_EINT_CFG0 + (port*0x20) + (pin_offset*sizeof(uint32_t));
+    uint32_t gpio_int_value = read_reg(gpio_int_reg);
+    gpio_int_value &= ~(0b1111 << (pin_index*4));
+    gpio_int_value |= (mode << (pin_index*4));
+    write_reg(gpio_int_reg, gpio_int_value); 
+}
+
+void enable_gpio_interrupt(gpio_port_t port, int pin, bool enable)
+{
+    uintptr_t gpio_int_reg = GPIO_PB_EINT_CTL + (port*0x20);
+    if(enable)
+    {
+        write_reg(gpio_int_reg, read_reg(gpio_int_reg) | (1 << pin));
+    }
+    else
+    {
+        write_reg(gpio_int_reg, read_reg(gpio_int_reg) & ~(1 << pin));
+    }
+}
+
+void set_gpio_pin_mode(gpio_port_t port, int pin, gpio_pin_mode_t mode)
+{
+    uint32_t pin_offset = pin / 8;
+    uint32_t pin_index = pin % 8;
+    uintptr_t gpio_mode_reg =  GPIO_PB_CFG_0 + (port*0x30) + (pin_offset*sizeof(uint32_t));
+    uint32_t gpio_mode_value = read_reg(gpio_mode_reg);
+
+    gpio_mode_value &= ~(0b1111 << (pin_index*4));
+    gpio_mode_value |= (mode << (pin_index*4));
+    write_reg(gpio_mode_reg, gpio_mode_value);
+}
+
+void set_gpio_pin_output(gpio_port_t port, int pin, bool enable)
+{
+    uintptr_t gpio_dat_reg = GPIO_PB_DAT + (port*0x30);
+
+    if(enable)
+    {
+        write_reg(gpio_dat_reg, read_reg(gpio_dat_reg) | (1 << pin));
+    }
+    else
+    {
+        write_reg(gpio_dat_reg, read_reg(gpio_dat_reg) & ~(1 << pin));
+    }
+}
+
 void enable_interrupt(uint64_t offset)
 {
     // Enable interrupts for supervisor
@@ -162,25 +247,23 @@ void enable_interrupt(uint64_t offset)
 
     // Set priority
     write_reg(PLIC_PRIO_REG(offset), 1);
+
+    // Setup interrupt controller
+    write_csr(sscratch, 0);
+    uint64_t stvec_val = ((uint64_t)gpiob_interrupt & ~(0b11));
+    write_csr(stvec, stvec_val);
 }
 
 void init_interrupts()
 {
-    write_csr(sscratch, 0);
-    uint64_t stvec_val = ((uint64_t)gpiob_interrupt & ~(0b11));
-    write_csr(stvec, stvec_val);
-
-    // Set PB1 to interrupt on rising edge
-    write_reg(GPIO_PB_EINT_CFG0, read_reg(GPIO_PB_EINT_CFG0) & ~(0b1111<<4));
+    // Setup PB1 interrupt mode to positive edge
+    set_gpio_interrupt(GPIO_PORT_B, 1, GPIO_INT_MODE_POS_EDGE);
 
     // Enable PB1 interrupt
-    write_reg(GPIO_PB_EINT_CTL, read_reg(GPIO_PB_EINT_CTL) | (1<<1));
+    enable_gpio_interrupt(GPIO_PORT_B, 1, true);
 
-    // Set GPIO PB1 to EINT1
-    uint32_t pb_cfg0 = read_reg(GPIO_PB_CFG_0);
-    pb_cfg0 &= ~(0b1111 << 4);
-    pb_cfg0 |= (0b1110 << 4);
-    write_reg(GPIO_PB_CFG_0, pb_cfg0);
+    // Set GPIO PB1 to interrupt
+    set_gpio_pin_mode(GPIO_PORT_B, 1, GPIO_MODE_INT);
 }
 
 int main(void)
@@ -197,12 +280,8 @@ int main(void)
     uint32_t output = 1;
 
     // Set GPIO PB0 to output
-    uint32_t pb_cfg0 = read_reg(GPIO_PB_CFG_0);
-    pb_cfg0 &= ~(0b1111 << 0);
-    pb_cfg0 |= (0b0001 << 0);
-    write_reg(GPIO_PB_CFG_0, pb_cfg0);
-
-    write_reg(GPIO_PB_DAT, read_reg(GPIO_PB_DAT) | output);
+    set_gpio_pin_mode(GPIO_PORT_B, 0, GPIO_MODE_OUTPUT);
+    set_gpio_pin_output(GPIO_PORT_B, 0, output);
 
 
     // Stay in an infinite loop so stuff doesn't crash
@@ -215,6 +294,6 @@ int main(void)
 #endif
         output = !output;
         for(int i=0; i < 1000*1000*10; i++) asm("nop");
-        write_reg(GPIO_PB_DAT, output);
+        set_gpio_pin_output(GPIO_PORT_B, 0, output);
     }
 }
