@@ -4,7 +4,8 @@ BIN_DIR := bin
 BIN_NAME := n64_cart.elf
 RAW := n64_cart.bin
 
-SRC_C := $(SRC_DIR)/main.c $(SRC_DIR)/printf.c
+SRC_C := $(SRC_DIR)/main.c $(SRC_DIR)/printf.c $(SRC_DIR)/gpio.c $(SRC_DIR)/d1_regs.c \
+	 $(SRC_DIR)/uart.c
 SRC_S := $(SRC_DIR)/start.S
 
 EXE := $(BIN_DIR)/$(BIN_NAME)
