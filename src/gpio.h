@@ -42,5 +42,7 @@ void set_gpio_interrupt(gpio_port_t port, int pin, gpio_interrupt_mode_t mode);
 void enable_gpio_interrupt(gpio_port_t port, int pin, bool enable);
 void set_gpio_pin_mode(gpio_port_t port, int pin, gpio_pin_mode_t mode);
 void set_gpio_pin_output(gpio_port_t port, int pin, bool enable);
+bool get_gpio_interrupt_status(gpio_port_t port, int pin);
+void clear_gpio_interrupt(gpio_port_t port, int pin);
 
 #endif

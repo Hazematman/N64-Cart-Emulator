@@ -48,6 +48,10 @@
     ); \
 })
 
+// csr bits
+#define SIP_SW_INT_PENDING (1<<1)
+#define SIP_EXT_INT_PENDING (1<<9)
+
 // System macros
 #define write_reg(r, v) write_reg_handler((volatile uint32_t*)(r), (v))
 #define read_reg(r) read_reg_handler((volatile uint32_t*)(r))
@@ -85,6 +89,11 @@
 
 // Interrupts
 #define GPIOB_NS 85
+#define GPIOC_NS 87
+#define GPIOD_NS 89
+#define GPIOE_NS 91
+#define GPIOF_NS 93
+#define GPIOG_NS 95
 
 // functions
 void write_reg_handler(volatile uint32_t *reg, uint32_t value);
