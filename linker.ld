@@ -15,11 +15,20 @@ SECTIONS
         *(.data .data.*)
         PROVIDE(__data_end = .);
     }
-    . += 1024;
-    PROVIDE(__stack_start = .);
-    . = ALIGN(16);
-    . += 4096;
-    PROVIDE(__stack_end = .);
+
+    .bss : {
+        PROVIDE(__bss_start = .);
+        . = ALIGN(16);
+        *(.bss .bss.*)
+        PROVIDE(__bss_end = .);
+    }
+
+    .stack : {
+        PROVIDE(__stack_start = .);
+        . = ALIGN(16);
+        . += 4096;
+        PROVIDE(__stack_end = .);
+    }
 
     /DISCARD/ :
     {

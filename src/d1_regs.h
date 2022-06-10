@@ -50,9 +50,7 @@
 
 // System macros
 #define write_reg(r, v) write_reg_handler((volatile uint32_t*)(r), (v))
-void write_reg_handler(volatile uint32_t *reg, uint32_t value);
 #define read_reg(r) read_reg_handler((volatile uint32_t*)(r))
-uint32_t read_reg_handler(volatile uint32_t *reg);
 
 // Registers 
 #define RISCV_CFG_BASE 0x06010000
@@ -87,5 +85,12 @@ uint32_t read_reg_handler(volatile uint32_t *reg);
 
 // Interrupts
 #define GPIOB_NS 85
+
+// functions
+void write_reg_handler(volatile uint32_t *reg, uint32_t value);
+uint32_t read_reg_handler(volatile uint32_t *reg);
+
+void plic_enable_interrupt(uint64_t offset, uint32_t priority);
+void set_interrupt_handler(void *handler);
 
 #endif

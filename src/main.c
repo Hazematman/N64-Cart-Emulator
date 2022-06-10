@@ -4,15 +4,17 @@
 #include "gpio.h"
 #include "printf.h"
 
+#define MAX_ROM_SIZE (64*1024*1024)
+
 // Nezeha board configuration
 // PB3  ALE_L (Header 38)
 // PB4  ALE_H (Header 40)
 // PB5 /READ (Header 12)
 
-const char *hello_world = "Hello World!\r\n";
+uint8_t rom_data[MAX_ROM_SIZE];
 
 __attribute__((interrupt("supervisor")))
-void gpiob_interrupt(void)
+void interrupt_handler(void)
 {
     uint64_t cause = read_csr(sip);
     uint32_t claim = read_reg(PLIC_SCLAIM_REG);
@@ -38,7 +40,7 @@ void gpiob_interrupt(void)
     write_reg(PLIC_SCLAIM_REG, claim);
 }
 
-void enable_interrupt(uint64_t offset)
+void enable_interrupts()
 {
     // Enable interrupts for supervisor
     csr_set_bit(sstatus, (1<<1));
@@ -46,21 +48,14 @@ void enable_interrupt(uint64_t offset)
     // Enable external interrupts for supervisor
     csr_set_bit(sie, (1<<9));
     
-    // Enable GPIOB interrupt for supervisor
-    int bit = offset % 32;
-    write_reg(PLIC_SIE(offset), 1<<bit);
-
-    // Set priority
-    write_reg(PLIC_PRIO_REG(offset), 1);
-
-    // Setup interrupt controller
-    write_csr(sscratch, 0);
-    uint64_t stvec_val = ((uint64_t)gpiob_interrupt & ~(0b11));
-    write_csr(stvec, stvec_val);
+    // Setup interrupt handler
+    set_interrupt_handler(interrupt_handler);
 }
 
 void init_interrupts()
 {
+    plic_enable_interrupt(GPIOB_NS, 1);
+
     // Setup PB1 interrupt mode to positive edge
     set_gpio_interrupt(GPIO_PORT_B, 1, GPIO_INT_MODE_POS_EDGE);
 
@@ -73,8 +68,10 @@ void init_interrupts()
 
 int main(void)
 {
-    enable_interrupt(GPIOB_NS);
+    enable_interrupts();
     init_interrupts();
+
+    rom_data[0] = 17;
 
     printf("Hello world!\r\n");
     uint64_t status = read_csr(sstatus);
