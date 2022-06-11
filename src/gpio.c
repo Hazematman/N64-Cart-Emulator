@@ -62,6 +62,5 @@ bool get_gpio_interrupt_status(gpio_port_t port, int pin)
 void clear_gpio_interrupt(gpio_port_t port, int pin)
 {
     uintptr_t gpio_int_status_reg = GPIO_PB_EINT_STATUS + (port*0x20);
-
     write_reg(gpio_int_status_reg, (1<<pin));
 }
