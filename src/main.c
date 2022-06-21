@@ -4,43 +4,53 @@
 #include "gpio.h"
 #include "printf.h"
 
+// PD0-PD15 N64 ADDR Bus
+// PB0 ALE_L
+// PG13 ALE_H
+// PE15 READ
+
+
 #define ALE_L_PORT GPIO_PORT_B 
-#define ALE_L_PIN 1
+#define ALE_L_PIN 0
 #define ALE_L_INT GPIOB_NS
 
 // TODO update these defines once pins are decided
-#define ALE_H_PORT GPIO_PORT_B 
-#define ALE_H_PIN 1
-#define ALE_H_INT GPIOB_NS
+#define ALE_H_PORT GPIO_PORT_G 
+#define ALE_H_PIN 13
+#define ALE_H_INT GPIOG_NS
 
-#define READ_PORT GPIO_PORT_B 
-#define READ_PIN 1
-#define READ_INT GPIOB_NS
+#define READ_PORT GPIO_PORT_E 
+#define READ_PIN 15
+#define READ_INT GPIOE_NS
+
+#define AD_PORT GPIO_PORT_D
 
 #define MAX_ROM_SIZE (64*1024*1024)
 
-uint8_t rom_data[MAX_ROM_SIZE];
-uint32_t address;
-bool in_read = false;
+static uint8_t rom_data[MAX_ROM_SIZE];
+static uint32_t address;
+static bool in_read = false;
+
+static gpio_pin_mode_block_t ad_output, ad_input;
 
 uint16_t read_ad_bus()
 {
-    // TODO implement this function once we pick ports
-    return 0;
+    return (uint16_t)(get_gpio_port_output(AD_PORT) & 0xFFFF);
 }
 
 void write_ad_bus(uint16_t value)
 {
-    // TODO implement this function once we pick ports
-    (void)value;
+    set_gpio_port_output(AD_PORT, value);
 }
 
 void set_ad_bus_output()
 {
+    set_gpio_port_mode_block(AD_PORT, ad_output);
 }
 
 void set_ad_bus_input()
 {
+    set_gpio_port_mode_block(AD_PORT, ad_input);
 }
 
 __attribute__((interrupt("supervisor")))
@@ -157,25 +167,13 @@ int main(void)
     enable_interrupts();
     init_interrupts();
 
+    ad_input = get_gpio_port_mode_block(AD_PORT, 0, 15, GPIO_MODE_INPUT);
+    ad_output = get_gpio_port_mode_block(AD_PORT, 0, 15, GPIO_MODE_OUTPUT);
     printf("Hello world!\r\n");
-
-    bool output = true;
-
-    // Set GPIO PB0 to output
-    set_gpio_pin_mode(GPIO_PORT_B, 0, GPIO_MODE_OUTPUT);
-    set_gpio_pin_output(GPIO_PORT_B, 0, output);
-
 
     // Stay in an infinite loop so stuff doesn't crash
     while(true)
     {
-#ifdef DEBUG_PRINT
-        // Check if there is an interrupt pending for GPIOB
-        printf("plic ip is 0x%0x\r\n", read_reg(PLIC_IP_REG(GPIOB_NS)));
-        printf("eint status is 0x%0x\r\n", read_reg(GPIO_PB_EINT_STATUS));
-#endif
-        output = !output;
-        for(int i=0; i < 1000*1000*10; i++) asm("nop");
-        set_gpio_pin_output(GPIO_PORT_B, 0, output);
+        asm("nop");
     }
 }

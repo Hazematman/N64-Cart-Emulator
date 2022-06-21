@@ -51,6 +51,51 @@ void set_gpio_pin_output(gpio_port_t port, int pin, bool enable)
     }
 }
 
+void set_gpio_port_mode(gpio_port_t port, int start_pin, int end_pin, gpio_pin_mode_t mode)
+{
+    for(int i=start_pin; i <= end_pin; i++)
+    {
+        set_gpio_pin_mode(port, i, mode);
+    } 
+}
+
+uint32_t get_gpio_port_output(gpio_port_t port)
+{
+    uintptr_t gpio_dat_reg = GPIO_PB_DAT + (port*0x30);
+    return read_reg(gpio_dat_reg);
+}
+
+void set_gpio_port_output(gpio_port_t port, uint32_t value)
+{
+    uintptr_t gpio_dat_reg = GPIO_PB_DAT + (port*0x30);
+    write_reg(gpio_dat_reg, value);
+}
+
+
+gpio_pin_mode_block_t get_gpio_port_mode_block(gpio_port_t port, int start_pin, int end_pin, gpio_pin_mode_t mode)
+{
+    (void)port;
+    uint32_t values[2] = {0, 0};
+    for(int i=start_pin; i <= end_pin; i++)
+    {
+        uint32_t pin_offset = i / 8;
+        uint32_t pin_index = i % 8;
+        values[pin_offset] &= ~(0b1111 << (pin_index*4));
+        values[pin_offset] |= (mode << (pin_index*4));
+    } 
+
+    return (uint64_t)values[1]<<32 | values[0];
+}
+
+void set_gpio_port_mode_block(gpio_port_t port, gpio_pin_mode_block_t mode_block)
+{
+    uintptr_t gpio_mode_reg =  GPIO_PB_CFG_0 + (port*0x30);
+    uint32_t values[2] = {(mode_block>>32)&0xFFFFFFFF, mode_block&0xFFFFFFFF};
+
+    write_reg(gpio_mode_reg, values[0]);
+    write_reg(gpio_mode_reg+4, values[1]);
+}
+
 bool get_gpio_interrupt_status(gpio_port_t port, int pin)
 {
     uintptr_t gpio_int_status_reg = GPIO_PB_EINT_STATUS + (port*0x20);

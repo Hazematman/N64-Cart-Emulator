@@ -10,14 +10,13 @@ SRC_S := $(SRC_DIR)/start.S
 
 EXE := $(BIN_DIR)/$(BIN_NAME)
 SRC := $(wildcard $(SRC_DIR)/*.c)
-#OBJ := $(SRC:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
 OBJ := $(patsubst $(SRC_DIR)/%.c,$(OBJ_DIR)/%.o,$(SRC_C)) $(patsubst $(SRC_DIR)/%.S,$(OBJ_DIR)/%.o,$(SRC_S))
 
 CC := riscv64-unknown-elf-gcc
 OBJCOPY := riscv64-unknown-elf-objcopy
-CPPFLAGS := -march=rv64g --std=gnu99 -msmall-data-limit=0 -MMD -MP
+CPPFLAGS := -march=rv64g -flto -O2 --std=gnu17 -msmall-data-limit=0 -MMD -MP
 CFLAGS   := -Wall
-LDFLAGS  := -march=rv64g -ffreestanding -nostdlib -msmall-data-limit=0 -T linker.ld
+LDFLAGS  := -march=rv64g -flto -O2 -ffreestanding -nostdlib -msmall-data-limit=0 -T linker.ld
 LDLIBS   :=  
 
 COMPILE.o = $(CC) $(CPPFLAGS) $(CFLAGS) -c $< -o $@

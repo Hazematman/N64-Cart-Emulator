@@ -38,10 +38,17 @@ typedef enum
     GPIO_MODE_DISABLE = 0b1111,
 } gpio_pin_mode_t;
 
+typedef uint64_t gpio_pin_mode_block_t; 
+
 void set_gpio_interrupt(gpio_port_t port, int pin, gpio_interrupt_mode_t mode);
 void enable_gpio_interrupt(gpio_port_t port, int pin, bool enable);
 void set_gpio_pin_mode(gpio_port_t port, int pin, gpio_pin_mode_t mode);
 void set_gpio_pin_output(gpio_port_t port, int pin, bool enable);
+void set_gpio_port_mode(gpio_port_t port, int start_pin, int end_pin, gpio_pin_mode_t mode);
+gpio_pin_mode_block_t get_gpio_port_mode_block(gpio_port_t port, int start_pin, int end_pin, gpio_pin_mode_t mode);
+void set_gpio_port_mode_block(gpio_port_t port, gpio_pin_mode_block_t mode_block);
+uint32_t get_gpio_port_output(gpio_port_t port);
+void set_gpio_port_output(gpio_port_t port, uint32_t value);
 bool get_gpio_interrupt_status(gpio_port_t port, int pin);
 void clear_gpio_interrupt(gpio_port_t port, int pin);
 
