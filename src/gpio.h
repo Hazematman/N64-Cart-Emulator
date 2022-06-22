@@ -38,6 +38,19 @@ typedef enum
     GPIO_MODE_DISABLE = 0b1111,
 } gpio_pin_mode_t;
 
+typedef enum
+{
+    LOSC_32KHZ,
+    HOSC_24MHZ,
+} gpio_debounce_source_t;
+
+typedef enum
+{
+    PULL_DISABLE,
+    PULL_UP,
+    PULL_DOWN,
+} gpio_pull_t;
+
 typedef uint64_t gpio_pin_mode_block_t; 
 
 void set_gpio_interrupt(gpio_port_t port, int pin, gpio_interrupt_mode_t mode);
@@ -51,5 +64,8 @@ uint32_t get_gpio_port_output(gpio_port_t port);
 void set_gpio_port_output(gpio_port_t port, uint32_t value);
 bool get_gpio_interrupt_status(gpio_port_t port, int pin);
 void clear_gpio_interrupt(gpio_port_t port, int pin);
+
+void set_gpio_debounce(gpio_port_t port, uint32_t prescale, gpio_debounce_source_t source);
+void set_gpio_pull(gpio_port_t port, int pin, gpio_pull_t pull); 
 
 #endif

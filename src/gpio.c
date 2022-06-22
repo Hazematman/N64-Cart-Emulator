@@ -109,3 +109,21 @@ void clear_gpio_interrupt(gpio_port_t port, int pin)
     uintptr_t gpio_int_status_reg = GPIO_PB_EINT_STATUS + (port*0x20);
     write_reg(gpio_int_status_reg, (1<<pin));
 }
+
+void set_gpio_debounce(gpio_port_t port, uint32_t prescale, gpio_debounce_source_t source)
+{
+    uintptr_t gpio_debounce_reg = GPIO_PB_EINT_DEB + (port*0x20);
+
+    write_reg(gpio_debounce_reg, ((prescale&0b111)<<4) | (source & 0b1));
+}
+
+
+void set_gpio_pull(gpio_port_t port, int pin, gpio_pull_t pull)
+{
+    uintptr_t gpio_pull_reg = GPIO_PB_PULL0 + (port*0x30);
+    uint32_t reg_value = read_reg(gpio_pull_reg);
+
+    reg_value &= ~(0b11<<(pin*2));
+    reg_value |= ((pull&0b11) << (pin*2));
+    write_reg(gpio_pull_reg, reg_value); 
+} 

@@ -1,8 +1,10 @@
 #include <stdbool.h>
 #include <stdint.h>
+#include <string.h>
 #include "d1_regs.h"
 #include "gpio.h"
 #include "printf.h"
+//#include "rom.h"
 
 // PD0-PD15 N64 ADDR Bus
 // PB0 ALE_L
@@ -69,29 +71,34 @@ void interrupt_handler(void)
         bool ale_h_status = get_gpio_interrupt_status(ALE_H_PORT, ALE_H_PIN);
         bool read_status = get_gpio_interrupt_status(READ_PORT, READ_PIN);
 
-        printf("GPIO Interrupt 0x%x!\r\ncause 0x%llx\r\n", read_reg(GPIO_PB_EINT_STATUS), cause);
+        //printf("GPIO Interrupt 0x%x!\r\ncause 0x%llx\r\n", read_reg(GPIO_PB_EINT_STATUS), cause);
         if(ale_l_status && claim == ALE_L_INT)
         {
-            printf("ALE_L ACTIVE\r\n");
+            //printf("ALE_L ACTIVE\r\n");
+            printf("ale\r\n");
             address |= read_ad_bus();
             clear_gpio_interrupt(ALE_L_PORT, ALE_L_PIN);
         }
 
         if(ale_h_status && claim == ALE_H_INT)
         {
-            printf("ALE_H ACTIVE\r\n");
+            //printf("ALE_H ACTIVE\r\n");
+            printf("alh\r\n");
             address |= (read_ad_bus() << 16);
             clear_gpio_interrupt(ALE_H_PORT, ALE_H_PIN);
         }
 
         if(read_status && claim == READ_INT)
         {
-            printf("READ ACTIVE\r\n");
+            //printf("READ ACTIVE\r\n");
+            printf("read\r\n");
             if(in_read)
             {
                 // Set AD bus to be an input so N64 and SBC don't try to drive the pins at the same time
                 // and set GPIO int mode to neg edge to trigger on next read
                 set_ad_bus_input();
+
+                set_gpio_pull(READ_PORT, READ_PIN, PULL_DOWN);
                 set_gpio_interrupt(READ_PORT, READ_PIN, GPIO_INT_MODE_NEG_EDGE);
 
                 in_read = false;
@@ -105,6 +112,7 @@ void interrupt_handler(void)
 
                 // Set GPIO int mode to trigger on rising edge so we can stop the SBC from driving
                 // the bus
+                set_gpio_pull(READ_PORT, READ_PIN, PULL_UP);
                 set_gpio_interrupt(READ_PORT, READ_PIN, GPIO_INT_MODE_POS_EDGE);
 
                 in_read = true;
@@ -115,6 +123,12 @@ void interrupt_handler(void)
     else
     {
         printf("Unknown cause 0x%llx, 0x%x\r\n", cause, claim);
+
+        // This is an infinite loop for a fatal error
+        while(true)
+        {
+            asm("nop");
+        }
     }
 
     write_reg(PLIC_SCLAIM_REG, claim);
@@ -135,22 +149,26 @@ void enable_interrupts()
 void init_interrupts()
 {
     // Enable ALE_L interrupt at platform level
-    plic_enable_interrupt(ALE_L_INT, 1);
+    plic_enable_interrupt(ALE_L_INT, 3);
     // Setup ALE_L interrupt mode to negative edge
     set_gpio_interrupt(ALE_L_PORT, ALE_L_PIN, GPIO_INT_MODE_NEG_EDGE);
     // Enable ALE_L interrupt
     enable_gpio_interrupt(ALE_L_PORT, ALE_L_PIN, true);
     // Set ALE_H pint mode to interrupt
-    set_gpio_pin_mode(ALE_H_PORT, ALE_H_PIN, GPIO_MODE_INT);
+    set_gpio_pin_mode(ALE_L_PORT, ALE_L_PIN, GPIO_MODE_INT);
+    set_gpio_debounce(ALE_L_PORT, 0, HOSC_24MHZ);
+    set_gpio_pull(ALE_L_PORT, ALE_L_PIN, PULL_UP);
 
     // Enable ALE_H interrupt at platform level
-    plic_enable_interrupt(ALE_H_INT, 1);
+    plic_enable_interrupt(ALE_H_INT, 2);
     // Setup ALE_H interrupt mode to negative edge
     set_gpio_interrupt(ALE_H_PORT, ALE_H_PIN, GPIO_INT_MODE_NEG_EDGE);
     // Enable ALE_H interrupt
     enable_gpio_interrupt(ALE_H_PORT, ALE_H_PIN, true);
     // Set ALE_H pint mode to interrupt
     set_gpio_pin_mode(ALE_H_PORT, ALE_H_PIN, GPIO_MODE_INT);
+    set_gpio_debounce(ALE_H_PORT, 0, HOSC_24MHZ);
+    set_gpio_pull(ALE_H_PORT, ALE_H_PIN, PULL_UP);
 
     // Enable READ interrupt at platform level
     plic_enable_interrupt(READ_INT, 1);
@@ -160,6 +178,8 @@ void init_interrupts()
     enable_gpio_interrupt(READ_PORT, READ_PIN, true);
     // Set READ pint mode to interrupt
     set_gpio_pin_mode(READ_PORT, READ_PIN, GPIO_MODE_INT);
+    set_gpio_debounce(READ_PORT, 0, HOSC_24MHZ);
+    set_gpio_pull(READ_PORT, READ_PIN, PULL_UP);
 }
 
 int main(void)
@@ -169,6 +189,8 @@ int main(void)
 
     ad_input = get_gpio_port_mode_block(AD_PORT, 0, 15, GPIO_MODE_INPUT);
     ad_output = get_gpio_port_mode_block(AD_PORT, 0, 15, GPIO_MODE_OUTPUT);
+
+    //memcpy(rom_data, spritemap_z64, sizeof(spritemap_z64));
     printf("Hello world!\r\n");
 
     // Stay in an infinite loop so stuff doesn't crash
