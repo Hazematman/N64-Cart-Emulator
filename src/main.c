@@ -13,7 +13,7 @@
 
 
 #define ALE_L_PORT GPIO_PORT_B 
-#define ALE_L_PIN 0
+#define ALE_L_PIN 1
 #define ALE_L_INT GPIOB_NS
 
 // TODO update these defines once pins are decided
@@ -148,6 +148,7 @@ void enable_interrupts()
 
 void init_interrupts()
 {
+#if 0
     // Enable ALE_L interrupt at platform level
     plic_enable_interrupt(ALE_L_INT, 3);
     // Setup ALE_L interrupt mode to negative edge
@@ -180,6 +181,8 @@ void init_interrupts()
     set_gpio_pin_mode(READ_PORT, READ_PIN, GPIO_MODE_INT);
     set_gpio_debounce(READ_PORT, 0, HOSC_24MHZ);
     set_gpio_pull(READ_PORT, READ_PIN, PULL_UP);
+
+#endif
 }
 
 int main(void)
@@ -193,9 +196,20 @@ int main(void)
     //memcpy(rom_data, spritemap_z64, sizeof(spritemap_z64));
     printf("Hello world!\r\n");
 
+    printf("Special reg 0x%x\r\n", read_reg(0x02000340));
+    printf("Special reg 0x%x\r\n", read_reg(0x02000344));
+    printf("Special reg 0x%x\r\n", read_reg(0x02000348));
+    printf("Special reg 0x%x\r\n", read_reg(0x02000350));
+
+    set_gpio_pin_mode(ALE_L_PORT, ALE_L_PIN, GPIO_MODE_INPUT);
+
     // Stay in an infinite loop so stuff doesn't crash
     while(true)
     {
+        if(get_gpio_pin_output(ALE_L_PORT, ALE_L_PIN) == false)
+        {
+            printf("ALE_L low\r\n");
+        }
         asm("nop");
     }
 }

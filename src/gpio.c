@@ -51,6 +51,12 @@ void set_gpio_pin_output(gpio_port_t port, int pin, bool enable)
     }
 }
 
+bool get_gpio_pin_output(gpio_port_t port, int pin)
+{
+    uintptr_t gpio_dat_reg = GPIO_PB_DAT + (port*0x30);
+    return ((read_reg(gpio_dat_reg) >> pin) & 0b1);
+}
+
 void set_gpio_port_mode(gpio_port_t port, int start_pin, int end_pin, gpio_pin_mode_t mode)
 {
     for(int i=start_pin; i <= end_pin; i++)
